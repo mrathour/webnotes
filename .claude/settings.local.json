@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\LENOVO\\\\Documents\\\\JS\\\\myNotionNotes\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(uv *)",
+      "PowerShell(uv *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python hooks/notion_sync.py"
+          }
+        ]
+      }
+    ]
+  }
+}

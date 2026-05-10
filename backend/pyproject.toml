@@ -1,0 +1,11 @@
+[project]
+name = "webnotes-backend"
+version = "1.0.0"
+description = "FastAPI backend for WebNotes — handles element capture, AI note generation, and Notion sync."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.136.1",
+    "httpx>=0.28.0",
+    "python-dotenv>=1.0.0",
+    "uvicorn[standard]>=0.46.0",
+]

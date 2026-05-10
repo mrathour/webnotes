@@ -1,0 +1,8 @@
+backend/notion_config.json
+backend/.env
+backend/.venv/
+notes_tracker.db
+notes/
+backend/saved/
+**/__pycache__/
+*.pyc
