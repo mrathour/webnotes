@@ -34,6 +34,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return;
   }
 
+  if (msg.type === 'MD_ELEMENT_CAPTURED') {
+    const tabId = sender.tab.id;
+    fetch('http://localhost:8000/save-md', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msg.data),
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.status === 'ok') {
+          chrome.tabs.sendMessage(tabId, { type: 'MD_SAVE_SUCCESS', title: result.title, url: result.url });
+        } else {
+          chrome.tabs.sendMessage(tabId, { type: 'MD_SAVE_ERROR', error: result.detail || 'Unknown error' });
+        }
+      })
+      .catch(() => {
+        chrome.tabs.sendMessage(tabId, {
+          type: 'MD_SAVE_ERROR',
+          error: 'Server unreachable — is the Python server running?',
+        });
+      });
+    return;
+  }
+
   if (msg.type === 'NOTION_AUTH') {
     handleNotionAuth()
       .then(sendResponse)

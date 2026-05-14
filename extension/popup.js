@@ -108,6 +108,17 @@ async function activatePicker() {
   window.close();
 }
 
+async function activateMdPicker() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: 'ACTIVATE_MD_PICKER' });
+  } catch {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+    await chrome.tabs.sendMessage(tab.id, { type: 'ACTIVATE_MD_PICKER' });
+  }
+  window.close();
+}
+
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   render();
@@ -233,4 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Always → Pick element
   el('pickBtn').addEventListener('click', activatePicker);
+
+  // Always → Capture as Markdown → Notion
+  el('mdPickBtn').addEventListener('click', activateMdPicker);
 });

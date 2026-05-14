@@ -4,6 +4,7 @@
   window.__ecActive = false;
 
   let hoveredEl = null;
+  let pickerMode = 'text'; // 'text' | 'md'
 
   function injectStyle() {
     if (document.getElementById('__ec_style__')) return;
@@ -73,12 +74,13 @@
     e.stopPropagation();
 
     const el = e.target;
+    const mode = pickerMode;
     el.classList.remove('__ec_hl__');
     deactivate();
     showToast('Saving...', 'info');
 
     chrome.runtime.sendMessage({
-      type: 'ELEMENT_CAPTURED',
+      type: mode === 'md' ? 'MD_ELEMENT_CAPTURED' : 'ELEMENT_CAPTURED',
       data: {
         text: el.innerText || el.textContent || '',
         html: el.outerHTML,
@@ -110,6 +112,7 @@
 
   function deactivate() {
     window.__ecActive = false;
+    pickerMode = 'text';
     if (hoveredEl) {
       hoveredEl.classList.remove('__ec_hl__');
       hoveredEl = null;
@@ -123,6 +126,7 @@
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === 'ACTIVATE_PICKER') activate();
+    else if (msg.type === 'ACTIVATE_MD_PICKER') { pickerMode = 'md'; activate(); }
     else if (msg.type === 'SAVE_SUCCESS') {
       if (msg.overwritten)
         showToast(`Overwritten: ${msg.path}`, 'warning');
@@ -130,5 +134,7 @@
         showToast(`Saved to: ${msg.path}`, 'success');
     }
     else if (msg.type === 'SAVE_ERROR') showToast(`Error: ${msg.error}`, 'error');
+    else if (msg.type === 'MD_SAVE_SUCCESS') showToast(`Saved to Notion: ${msg.title}`, 'success');
+    else if (msg.type === 'MD_SAVE_ERROR') showToast(`Error: ${msg.error}`, 'error');
   });
 })();

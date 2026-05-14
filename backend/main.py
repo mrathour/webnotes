@@ -33,6 +33,9 @@ app.add_middleware(
 SAVE_DIR = Path("saved")
 SAVE_DIR.mkdir(exist_ok=True)
 
+MD_SAVE_DIR = Path("md_captures")
+MD_SAVE_DIR.mkdir(exist_ok=True)
+
 INVALID_CHARS = re.compile(r'[\\/:*?"<>|]')
 
 
@@ -246,6 +249,62 @@ async def make_notes():
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+def _preprocess_html(html: str) -> str:
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Replace Monaco editor blocks with plain <pre><code> so markdownify handles them correctly
+    for block in soup.select("div.rc-CodeBlock"):
+        lang = block.get("data-mode-id", "")
+        lines = []
+        for vl in block.select("div.view-line"):
+            lines.append(vl.get_text().replace("\xa0", " ").rstrip())
+        pre = soup.new_tag("pre")
+        code = soup.new_tag("code")
+        if lang:
+            code["class"] = f"language-{lang}"
+        code.string = "\n".join(lines)
+        pre.append(code)
+        block.replace_with(pre)
+
+    # Strip Monaco notification banners ("Pressing Tab in the current editor...")
+    for alert in soup.select("div[role='alert']"):
+        alert.decompose()
+
+    return str(soup)
+
+
+@app.post("/save-md")
+async def save_md(data: ElementData):
+    from markdownify import markdownify as md_convert
+    from notion_sync import load_config, markdown_to_blocks, create_notion_page
+
+    cleaned_html = _preprocess_html(data.html)
+    markdown = (
+        f"URL: {data.url}\n\n"
+        + md_convert(cleaned_html, heading_style="ATX", bullets="-").strip()
+    )
+
+    stem = title_to_filename(data.title)
+    file_path = MD_SAVE_DIR / f"{stem}.md"
+    file_path.write_text(markdown, encoding="utf-8")
+
+    try:
+        config = load_config()
+    except FileNotFoundError:
+        raise HTTPException(status_code=400, detail="Notion not configured — connect it in the extension first")
+
+    blocks = markdown_to_blocks(markdown)
+    url = await create_notion_page(
+        token=config["token"],
+        target_id=config["target_id"],
+        target_type=config["target_type"],
+        title=stem,
+        blocks=blocks,
+    )
+    return {"status": "ok", "url": url, "title": stem, "path": str(file_path.resolve())}
 
 
 @app.post("/notion/sync")
